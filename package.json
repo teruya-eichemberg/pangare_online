@@ -1,0 +1,9 @@
+{
+  "name": "pangare-online",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pangaré — corrida, apostas e push your luck",
+  "main": "server.js",
+  "scripts": {"start":"node server.js"},
+  "dependencies": {"express":"^4.21.2","ws":"^8.18.0"}
+}

@@ -1,0 +1,14 @@
+PANGARÉ ONLINE — protótipo 0.1
+
+Incluído:
+- servidor Node/Express/WebSocket
+- cliente web responsivo
+- 15 faces de pangaré
+- verso do baralho
+- Cenoura e Galinha
+- 20 cartas de aposta (4 jogadores x 5 posições)
+- bots
+- salas por código
+
+Não incluído:
+- Cartas de Auxílio
