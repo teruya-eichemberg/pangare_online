@@ -92,23 +92,41 @@ function finishTurn(room){
   room.current=(room.current+1)%room.players.length; room.turnNumber++; log(room,`É a vez de ${room.players[room.current].name}.`); broadcast(room); botMaybe(room);
 }
 function reveal(room,p){
-  if(room.status!=='game'||room.players[room.current].id!==p.id||room.pending){return;}
+  if(room.status!=='game'||room.players[room.current].id!==p.id||room.phase!=='race'||room.pending){return;}
   if(room.revealed.length>=4){return;}
   const c=room.deck.pop(); if(!c){return;}
   room.revealed.push(c);
-  if(room.revealed.length>=2){
-    const counts={}; room.revealed.forEach(x=>counts[x.horse]=(counts[x.horse]||0)+1);
-    if(Object.values(counts).some(n=>n>=3)) {p.actions.push(room.actionDeck.pop(),room.actionDeck.pop()); log(room,'Bônus: 3 pangarés iguais — +2 Cartas de Ação.');}
-    else if(Object.values(counts).some(n=>n>=2)) {room.pending={type:'removeCard',playerId:p.id}; log(room,'Bônus: 2 pangarés iguais — escolha uma carta da pista para excluir.');}
+
+  // Bônus: verificar combinações de pangarés revelados.
+  const counts={}; room.revealed.forEach(x=>counts[x.horse]=(counts[x.horse]||0)+1);
+  const hasTriple=Object.values(counts).some(n=>n>=3);
+  const hasPair=Object.values(counts).some(n=>n>=2);
+
+  // Primeiro resolve o bônus de 3 iguais; ele não exige escolha.
+  if(hasTriple && !room.bonusTripleTriggered){
+    const a1=room.actionDeck.pop(), a2=room.actionDeck.pop();
+    if(a1) p.actions.push(a1); if(a2) p.actions.push(a2);
+    room.bonusTripleTriggered=true;
+    log(room,'Bônus: 3 pangarés iguais — +2 Cartas de Ação.');
+  } else if(hasPair && !room.bonusPairTriggered){
+    room.pending={type:'pairBonus',playerId:p.id};
+    room.phase='bonus';
+    log(room,'Bônus: 2 pangarés iguais — você pode excluir uma carta da pista.');
+    broadcast(room); return;
   }
+
   if(accidentCheck(room.revealed)){
-    room.revealed=[]; p.actions.push(room.actionDeck.pop()); room.pending=null; room.phase='action'; log(room,'ACIDENTE! As cartas reveladas foram descartadas. +1 Carta de Ação.'); broadcast(room); botMaybe(room); return;
+    room.revealed=[]; room.pending=null; room.phase='action';
+    const a=room.actionDeck.pop(); if(a) p.actions.push(a);
+    log(room,'ACIDENTE! As cartas reveladas foram descartadas. +1 Carta de Ação.');
+    broadcast(room); return;
   }
+
   if(room.revealed.length===4){ placeRevealed(room,p); }
   else broadcast(room);
 }
 function placeRevealed(room,p){ room.revealed.forEach(c=>room.rows[c.horse].cards.push(c)); const n=room.revealed.length; room.revealed=[]; room.pending=null; room.phase='action'; log(room,`${p.name} parou e avançou ${n} carta(s).`); broadcast(room); }
-function stop(room,p){ if(room.status!=='game'||room.players[room.current].id!==p.id||room.pending && room.pending.type!=='pairBonus')return; placeRevealed(room,p); if(room.status==='game') broadcast(room); }
+function stop(room,p){ if(room.status!=='game'||room.phase!=='race'||room.players[room.current].id!==p.id||room.pending)return; placeRevealed(room,p); if(room.status==='game') broadcast(room); }
 function playAction(room,p,data){
   if(room.status!=='game'||room.phase!=='action'||room.players[room.current].id!==p.id||room.pending||p.actions.length===0)return;
   const idx=Math.max(0,Math.min(p.actions.length-1,Number(data.index))); p.actions.splice(idx,1);
